@@ -1,0 +1,6 @@
+.github
+examples/
+preview_tasks/
+tests/
+utils/
+venv*/

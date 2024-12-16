@@ -1,7 +1,6 @@
-ARG PYTHON_VERSION
-FROM python:${PYTHON_VERSION}-slim
+FROM python:3.10-slim
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 		openssh-server \
 		iproute2 \
 		nmap \
@@ -13,6 +12,7 @@ RUN apt-get update && apt-get install -y \
 		rsync \
 		vim \
 		curl \
+	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN echo "UseDNS no" >> /etc/ssh/sshd_config && \
@@ -22,26 +22,14 @@ RUN echo "UseDNS no" >> /etc/ssh/sshd_config && \
 	echo "ClientAliveInterval 60" >> /etc/ssh/sshd_config && \
 	echo "ClientAliveCountMax 3" >> /etc/ssh/sshd_config
 
-RUN pip install -U pip
+RUN pip install --upgrade pip
 
 WORKDIR /app
 
-COPY pyproject.toml README.md /app/
-COPY ray_on_golem/__init__.py /app/ray_on_golem/__init__.py
+COPY . /app
 
-RUN pip install poetry && \
-	poetry config virtualenvs.create false
-RUN poetry install --no-interaction --no-ansi --only ray
+# Install the package in editable mode
+RUN pip install -e .
 
-RUN pip config set global.index-url https://pypi.dev.golem.network/simple
-RUN pip install pillow
+ENTRYPOINT ["/bin/bash", "-c", "service ssh start && tail -f /dev/null"]
 
-RUN python -m venv --system-site-packages /root/venv
-RUN bash -c "echo source /root/venv/bin/activate >> /root/.bashrc"
-
-COPY ray_on_golem /app/ray_on_golem/
-
-RUN rm -r /root/.cache
-RUN mv /root /root_copy
-
-VOLUME /root
